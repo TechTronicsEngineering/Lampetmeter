@@ -1,0 +1,190 @@
+// Include the needed libraries
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED width
+#define SCREEN_HEIGHT 64 // OLED height
+
+#define OLED_RESET     -1
+#define SCREEN_ADDRESS 0x3C // See datasheet for I2C address, this might be different for your display
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET); // Create the display object
+
+// Create variables for the buttons and light measurement
+const int modeButton = 2; // Constant for the pin the mode button is tied to
+const int resetButton = 3; // Constant for the pin the reset button is tied to
+int buttonPushCounter = 0; // Variable for counting pushes of the mode button. The number of pushes determines the mode
+int modeButtonState = 1; // Variable for checking if the mode button is pressed
+int resetButtonState = 1; // Variable for checking if the reset button is pressed
+int currentPlotPoint = 0; // Variable for the x-axis of the histogram; this increases every 0.01 seconds
+long peakLampets = 0; // Stores the largest number of Lampets since the last reset or power up
+
+void setup() {
+  // Set button pins as inputs (with intenral pullup resistor active)
+  pinMode(modeButton, INPUT_PULLUP);
+  pinMode(resetButton, INPUT_PULLUP);
+
+  Serial.begin(9600); // Initiallize serial communication
+
+  // If display is non-functional, do not proceed
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+
+  display.clearDisplay(); // Make sure display is blank
+
+  // Display "TechTronics" for one second
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 17);
+  display.println("   Tech");
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 37);
+  display.println("  Tronics");
+  display.display();
+  delay(1000);
+
+  display.clearDisplay();
+}
+
+void loop() {
+  // Create the variables needed for light measurement
+  long sensorReading = analogRead(A0); // Variable for the raw reading from the photocell
+  long lampetsGraph = map(sensorReading, 0, 1023, 0, 128); // Variable for the length of the graph at the bottom of the display
+  long lampets = map(sensorReading, 0, 1023, 0, 100000); // Variable for the displayed number of Lampets
+  long kiloLampets = lampets / 1000; // Divides Lampets by 1000. This is used for auto-ranging
+  long lampetsGraphHistogram = map(sensorReading, 0, 1023, 64, 16); // Scales the reading from the photocell into a y-axis number for the histogram
+
+  // Set button variables created earlier to a digitalRead
+  modeButtonState = digitalRead(modeButton);
+  resetButtonState = digitalRead(resetButton);
+
+  // Check if mode button is pressed
+  if (modeButtonState == 0) {
+    buttonPushCounter++; // Increment the counter for mode button presses
+    delay(250);
+  }
+
+  // Check if the current light levels are greater than the last measured peak
+  if (lampets > peakLampets) {
+    peakLampets = lampets; // Set peakLampets to the new highest value
+  }
+
+  // Check if the mode button push counter equals zero
+  if (buttonPushCounter == 0) {
+    // If so, enter the measurement mode
+    currentPlotPoint = 0; // Clear histogram; this is required to make sure the graph functions correctly
+    display.clearDisplay();
+
+    // Draw a thick line at the bottom of the display, with it's length proportional to the measured light
+    display.drawFastHLine(0, 58, lampetsGraph, SSD1306_WHITE); display.drawFastHLine(0, 59, lampetsGraph, SSD1306_WHITE); display.drawFastHLine(0, 60, lampetsGraph, SSD1306_WHITE);
+    display.drawFastHLine(0, 61, lampetsGraph, SSD1306_WHITE); display.drawFastHLine(0, 62, lampetsGraph, SSD1306_WHITE); display.drawFastHLine(0, 63, lampetsGraph, SSD1306_WHITE);
+
+    // Draw a scale for the graph near the bottom of the screen
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 45);
+    display.println("1k  25k 50k 75k 100k");
+
+    // Display the current measured Lampets. If the number is more than 1000, scale to kiloLampets
+    if (lampets >= 1000) {
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 17);
+      display.println(kiloLampets);
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(64, 17);
+      display.println("kLampets");
+    }else{
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 17);
+      display.println(lampets);
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(64, 17);
+      display.println("Lampets");
+    }
+
+    // Check if reset button is pressed
+    if (resetButtonState == 0) {
+      lampets = 0; // Set the Lampets variable to zero for the next measurement
+    }
+
+    display.display(); // Send the buffer to the OLED
+  }
+
+  // Check if the mode button push counter equals one
+  if (buttonPushCounter == 1) {
+    // Clear the display if histogram restarts
+    if (currentPlotPoint == 0) {
+      display.clearDisplay();
+    }
+
+    // Draw a pixel with it's x-axis set to the currentPlotPoint, and it's y-axis to the scaled light measurement
+    display.drawPixel(currentPlotPoint, lampetsGraphHistogram, SSD1306_WHITE);
+    display.display(); // Send the buffer to display
+
+    delay(10); // Wait 0.01 seconds
+
+    // Check if the graph reached the end of the display
+    if (currentPlotPoint >= 128) {
+      currentPlotPoint = 0; // If so, set the next pixel's x-axis to the beginning of the display
+    }else{
+      currentPlotPoint++; // If not, increase the x-axis variable by one so that the next pixel is plotted on the next column
+    }
+
+    // Check if the reset button is pressed
+    if (resetButtonState == 0) {
+      currentPlotPoint = 0; // If so, restart the graph and set the next plot point equal to zero
+    }
+  }
+
+  // Check if the mode button push counter equals two
+  if (buttonPushCounter == 2) {
+    display.clearDisplay(); // Clear the screen
+
+    // Display the highest number of Lampets detected. If > 999, divide by 1000 and display a "k"
+    if (peakLampets >= 1000) {
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 17);
+      display.println(peakLampets / 1000);
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(64, 17);
+      display.println("kLampets");
+    }else{
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(0, 17);
+      display.println(peakLampets);
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(64, 17);
+      display.println("Lampets");
+    }
+
+    // Display a "MAX" icon at the bottom of the screen to indicate peak value mode
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 55);
+    display.println("MAX");
+
+    display.display(); // Send buffer to display
+
+    // Check if the reset button is pressed
+    if (resetButtonState == 0) {
+      peakLampets = 0; // If so, reset the peak value
+    }
+  }
+
+  // If the mode button is pressed a third time, set the buttonPushCounter to zero to enter the measurement mode again
+  if (buttonPushCounter == 3) {
+    buttonPushCounter = 0;
+  }
+}
