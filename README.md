@@ -34,7 +34,7 @@ Once the circuit is built, just connect a 9V battery between the VCC and ground 
 To use the Lampetmeter, simply press S3 and it will power up, displaying "TechTronics" on the screen for one second.
 After booting up, the device should automatically enter the measurement mode, displaying the current number of Lampets on the screen and a small graph at the bottom.
 Pressing S1 will reset the current measurment. Pressing S2 will cause the Lampetmeter to enter the histogram mode; where it plots light vs time. Every 1.28 seconds, it will wipe the old graph from the display and begin a new one, and pressing S1 will cause it to do so prematurely.
-A second press of S2 will enter the MAX mode. In this mode, the Lampetmeter will display the greatest amount of light it hasdetected since power up. This can be reset by pressing S1.
+A second press of S2 will enter the MAX mode. In this mode, the Lampetmeter will display the greatest amount of light it has detected since power up. This can be reset by pressing S1.
 
 When you're done with the Lampetmeter, you may turn it off by a press of S4. When powered off, the device will not draw any current from the battery powering it.
 
