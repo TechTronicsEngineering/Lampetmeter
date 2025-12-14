@@ -27,6 +27,7 @@ To upload the code:
 
 ## Building the circuit
 Now it's time to start building the circuit! Here's my (hopefully readable) schematic.
+
 ![IMG_E1696](https://github.com/user-attachments/assets/757d0b21-ac95-4667-ada4-e55e4dea526f)
 Once the circuit is built, just connect a 9V battery between the VCC and ground points. The Lampetmeter is complete!
 
