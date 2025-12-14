@@ -4,7 +4,7 @@
 The Lampetmeter is a simple light detector project for Arduino AVR boards like the Nano, Uno, or Mega. It senses light using a standard CdS photocell (also known as an LDR) and displays it in the unit "Lampets" on a 128x64 OLED display. It features several modes: measurement, histogram, and max, and the mode can be selected via the mode button (S2).
 
 ## To build the Lampetmeter, you'll need:
-- Arduino (Nano, Uno, or Mega should all work fine)
+- Arduino (I used an Uno, but a Nano or Mega should also work fine)
 - 128x64 I2C OLED display
 - IRFZ44N N-channel MOSFET
 - 2N3906 PNP BJT
